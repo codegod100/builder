@@ -21,6 +21,7 @@ class BuildPlan:
     derivations: list[str]
     outputs: list[str]
     requisites: list[str]
+    upload_paths: list[str]
     upload_bytes: int
 
 
@@ -142,6 +143,11 @@ def unique(items: Iterable[str]) -> list[str]:
     return ordered
 
 
+def chunked(items: Sequence[str], size: int) -> Iterable[list[str]]:
+    for offset in range(0, len(items), size):
+        yield list(items[offset : offset + size])
+
+
 def format_bytes(value: int) -> str:
     units = ["B", "KiB", "MiB", "GiB", "TiB"]
     size = float(value)
@@ -176,6 +182,22 @@ def ssh_prefix(args: argparse.Namespace) -> list[str]:
     return [args.ssh, *args.ssh_option, args.host]
 
 
+def query_remote_existing_paths(args: argparse.Namespace, paths: Sequence[str]) -> list[str]:
+    existing: list[str] = []
+    for batch in chunked(list(paths), 128):
+        cmd = [
+            *ssh_prefix(args),
+            "sh",
+            "-c",
+            'for path in "$@"; do [ -e "$path" ] && printf "%s\\n" "$path"; done',
+            "sh",
+            *batch,
+        ]
+        result = run(cmd)
+        existing.extend(line.strip() for line in result.stdout.splitlines() if line.strip())
+    return unique(existing)
+
+
 def evaluate_plan(args: argparse.Namespace) -> BuildPlan:
     base = nix_base_args(args)
     derivation_result = run(
@@ -197,20 +219,26 @@ def evaluate_plan(args: argparse.Namespace) -> BuildPlan:
     requisites = unique(
         [line.strip() for line in requisites_result.stdout.splitlines() if line.strip()]
     )
+    remote_existing = set(query_remote_existing_paths(args, requisites))
+    upload_paths = [path for path in requisites if path not in remote_existing]
 
-    size_result = run(["nix", "path-info", "--json", *requisites])
-    size_data = json.loads(size_result.stdout)
-    upload_bytes = sum(
-        int(metadata.get("narSize", 0))
-        for metadata in size_data.values()
-        if isinstance(metadata, dict)
-    )
+    if upload_paths:
+        size_result = run(["nix", "path-info", "--json", *upload_paths])
+        size_data = json.loads(size_result.stdout)
+        upload_bytes = sum(
+            int(metadata.get("narSize", 0))
+            for metadata in size_data.values()
+            if isinstance(metadata, dict)
+        )
+    else:
+        upload_bytes = 0
 
     return BuildPlan(
         installables=list(args.installables),
         derivations=derivations,
         outputs=outputs,
         requisites=requisites,
+        upload_paths=upload_paths,
         upload_bytes=upload_bytes,
     )
 
@@ -220,18 +248,23 @@ def print_plan(plan: BuildPlan, host: str) -> None:
     print(f"installables: {', '.join(plan.installables)}")
     print(f"derivations: {len(plan.derivations)}")
     print(f"closure paths: {len(plan.requisites)}")
+    print(f"paths to upload: {len(plan.upload_paths)}")
     print(f"estimated upload: {format_bytes(plan.upload_bytes)}")
     for drv in plan.derivations:
         print(f"  drv: {drv}")
 
 
 def stream_upload(args: argparse.Namespace, plan: BuildPlan) -> None:
+    if not plan.upload_paths:
+        print("remote store already has the full closure", file=sys.stderr)
+        return
+
     remote_import_cmd = [
         *ssh_prefix(args),
         args.remote_store_command,
         "--import",
     ]
-    export_cmd = ["nix-store", "--export", *plan.requisites]
+    export_cmd = ["nix-store", "--export", *plan.upload_paths]
 
     try:
         exporter = subprocess.Popen(export_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
