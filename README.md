@@ -82,6 +82,36 @@ Example for a NixOS flake:
 After that, regular `nix build` on that machine will use the configured remote
 builders through the local Nix daemon.
 
+## Shell Notes
+
+The `builder` CLI does not require Bash. It executes `nix`, `nix-store`, and
+`ssh` directly. The only shell-sensitive part is how you write command
+substitution in your interactive shell when composing installables by hand.
+
+Bash and zsh:
+
+```bash
+nix run . -- my-builder .#packages.$(nix eval --impure --raw --expr builtins.currentSystem).default
+```
+
+Fish:
+
+```fish
+nix run . -- my-builder .#packages.(nix eval --impure --raw --expr builtins.currentSystem).default
+```
+
+If you want a shell-agnostic form, resolve the system first and then run the
+command with the literal result:
+
+```text
+nix eval --impure --raw --expr builtins.currentSystem
+# Example output: x86_64-linux
+```
+
+```bash
+nix run . -- my-builder .#packages.x86_64-linux.default
+```
+
 ## Usage
 
 Dry-run a plan:
