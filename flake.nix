@@ -46,7 +46,7 @@
 
             meta = with pkgs.lib; {
               description = "Remote Nix build helper with explicit upload progress";
-              homepage = "https://github.com/your-org/builder";
+              homepage = "https://github.com/codegod100/builder";
               license = licenses.mit;
               mainProgram = "builder";
               platforms = platforms.unix;
