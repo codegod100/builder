@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "builder"
+version = "0.1.0"
+description = "Remote Nix build helper with explicit upload progress"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+builder = "builder.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/builder"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
