@@ -74,8 +74,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--copy-back",
-        action="store_true",
-        help="Copy build outputs back to the local store after the remote build",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Copy build outputs back to the local store after the remote build (default: enabled)",
     )
     parser.add_argument(
         "--no-build",

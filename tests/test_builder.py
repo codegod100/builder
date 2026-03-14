@@ -42,6 +42,13 @@ class BuilderTests(unittest.TestCase):
         self.assertEqual(args.ssh_option, ["-p", "2222"])
         self.assertEqual(args.nix_option, [["builders-use-substitutes", "true"]])
         self.assertEqual(args.installables, [".#pkg"])
+        self.assertTrue(args.copy_back)
+
+    def test_parser_allows_disabling_copy_back(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["--no-copy-back", "host", ".#pkg"])
+
+        self.assertFalse(args.copy_back)
 
 
 if __name__ == "__main__":

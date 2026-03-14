@@ -126,6 +126,9 @@ Upload and build:
 builder my-builder .#packages.x86_64-linux.default
 ```
 
+By default, successful remote builds are copied back into the local store. Use
+`--no-copy-back` to leave the outputs only on the remote machine.
+
 Use a non-default SSH port:
 
 ```bash
@@ -138,10 +141,10 @@ Upload only:
 builder my-builder .#hello --no-build
 ```
 
-Build remotely and copy outputs back:
+Build remotely without copying outputs back:
 
 ```bash
-builder my-builder .#hello --copy-back
+builder my-builder .#hello --no-copy-back
 ```
 
 ## Notes
