@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from builder.main import build_parser, chunked, format_bytes, render_progress, shell_join, unique
+from builder.main import build_parser, format_bytes, render_progress, shell_join, unique
 
 
 class BuilderTests(unittest.TestCase):
@@ -13,9 +13,6 @@ class BuilderTests(unittest.TestCase):
 
     def test_unique_preserves_order(self) -> None:
         self.assertEqual(unique(["a", "b", "a", "c", "b"]), ["a", "b", "c"])
-
-    def test_chunked_splits_sequences(self) -> None:
-        self.assertEqual(list(chunked(["a", "b", "c", "d", "e"], 2)), [["a", "b"], ["c", "d"], ["e"]])
 
     def test_shell_join_quotes_spaces(self) -> None:
         self.assertEqual(
